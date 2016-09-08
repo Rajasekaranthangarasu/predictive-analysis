@@ -29,9 +29,14 @@ train[c("PoolQC")][is.na(train[c("PoolQC")])] <- "NoPool"
 train[c("Fence")][is.na(train[c("Fence")])] <- "NoFence"
 train[c("MiscFeature")][is.na(train[c("MiscFeature")])] <- "None"
 train[c("FireplaceQu")][is.na(train[c("FireplaceQu")])] <- "NoFireplace"
+
+# 2.a Renaming the incorrectly labelled identifiers
+train$firstFloorSqft<-train$`1stFlrSF` # incorrect named identifier
+train$secndFloorSqft<-train$`2ndFlrSF` # incorrect named identifier
+train$`1stFlrSF`<-NULL
+train$`2ndFlrSF`<-NULL
 sum(is.na(train)) # 357 missing
-#str(train)
-colSums(is.na(train)) # all categorical NA recoded accordingly as they were not missing according to the data dictionary
+#colSums(is.na(train)) # all categorical NA recoded accordingly as they were not missing according to the data dictionary
 
 # 3. Recoding the test data
 test[c("Alley")][is.na(test[c("Alley")])] <- "NoAlleyAccess"
@@ -48,8 +53,11 @@ test[c("PoolQC")][is.na(test[c("PoolQC")])] <- "NoPool"
 test[c("Fence")][is.na(test[c("Fence")])] <- "NoFence"
 test[c("MiscFeature")][is.na(test[c("MiscFeature")])] <- "None"
 test[c("FireplaceQu")][is.na(test[c("FireplaceQu")])] <- "NoFireplace"
+test$firstFloorSqft<-test$`1stFlrSF` # incorrect named identifier
+test$secndFloorSqft<-test$`2ndFlrSF` # incorrect named identifier
+test$`1stFlrSF`<-NULL
+test$`2ndFlrSF`<-NULL
 sum(is.na(test)) # 358 missing values
-colSums(is.na(test))
 
 #4. Missing value treatment
 ## Train data
@@ -71,22 +79,19 @@ sum(is.na(test.complete)) #28
 #6. Check for zero variance predictors in train data
 library(caret) # load the caret library for it has the nearZeroVar()
 nzv_cols <- nearZeroVar(train.complete)
-nzv_cols
 names(train.complete[nzv_cols])
 if(length(nzv_cols) > 0) 
   train.complete <- train.complete[, -nzv_cols] # 1460 60
-
+dim(train.complete)
 #7. Check for zero variance predictors in test data
 nzv_cols <- nearZeroVar(test.complete)
 names(test[nzv_cols])
 if(length(nzv_cols) > 0) 
   test.complete <- test.complete[, -nzv_cols] # 1459 61
+dim(test.complete)
 ## Missing data treatment: There are two types of missing data.a) MCAR (Missing Completetly At Random) & (b) MNAR (Missing Not At Random)
 ## Usually, MCAR is the desirable scenario in case of missing data. For this analysis I will assume that MCAR is at play. 
 ## Assuming data is MCAR, too much missing data can be a problem too. Usually a safe maximum threshold is 5% of the total for large datasets. If missing data for a certain feature or sample is more than 5% then you probably should leave that feature or sample out. We therefore check for features (columns) and samples (rows) where more than 5% of the data is missing using a simple function
-# Check for missing data in train
-sum(is.na(train.complete)) #9
-sum(is.na(test.complete)) #24
 
 # 8. Visualizing the missing data pattern using the VIM package
 library(VIM)
@@ -102,7 +107,6 @@ aggr_plot <- aggr(test.complete, col=c('navyblue','red'), numbers=TRUE, sortVars
 # http://www.ats.ucla.edu/stat/r/library/contrast_coding.htm
 # https://www.r-bloggers.com/quickly-create-dummy-variables-in-a-data-frame/
 str(train)
-table(train.complete$MSZoning)
 train.complete$housezone[train.complete$MSZoning %in% c("FV")] <- 4
 train.complete$housezone[train.complete$MSZoning %in% c("RL")] <- 3
 train.complete$housezone[train.complete$MSZoning %in% c("RH","RM")] <- 2
@@ -321,7 +325,7 @@ train.complete$housesalecond[train.complete$SaleCondition %in% c("AdjLand","Allo
 train.complete$housesalecond[train.complete$SaleCondition %in% c("Family")] <- 2
 train.complete$housesalecond[train.complete$SaleCondition %in% c("Partial")] <- 1
 
-# 10.  Drop all the character variables ####
+# 10.  Drop all the character variables
 train.complete$MSZoning<-NULL
 train.complete$LotShape<-NULL
 train.complete$LotConfig<-NULL
@@ -355,8 +359,14 @@ train.complete$ExterCond<-NULL
 train.complete$LandContour<-NULL
 
 str(train.complete)
+sum(is.na(train.complete))
+colSums(is.na(train.complete))
+# 11. Fix some NA's in train.complete
+train.complete$houselectric[is.na(train.complete$houselectric)]<- -1
+train.complete$housemasonrytype[is.na(train.complete$housemasonrytype)]<- -1
+sum(is.na(train.complete)) # No missing values is train.complete
 
-# 11. DUMMY CODING FOR CHARACTER VARIABLES in TEST DATA
+# 12. DUMMY CODING FOR CHARACTER VARIABLES in TEST DATA
 test.complete$housezone[test.complete$MSZoning %in% c("FV")] <- 4
 test.complete$housezone[test.complete$MSZoning %in% c("RL")] <- 3
 test.complete$housezone[test.complete$MSZoning %in% c("RH","RM")] <- 2
@@ -562,7 +572,7 @@ test.complete$housesalecond[test.complete$SaleCondition %in% c("AdjLand","Alloca
 test.complete$housesalecond[test.complete$SaleCondition %in% c("Family")] <- 2
 test.complete$housesalecond[test.complete$SaleCondition %in% c("Partial")] <- 1
 
-#12. Drop all the character variables in Test data
+#13. Drop all the character variables in Test data
 test.complete$MSZoning<-NULL
 test.complete$LotShape<-NULL
 test.complete$LotConfig<-NULL
@@ -595,13 +605,24 @@ test.complete$ExterQual<-NULL
 test.complete$ExterCond<-NULL
 test.complete$LandContour<-NULL
 
+# 14. Fix some NA's in test.complete data
 str(test.complete)
+sum(is.na(test.complete))
+colSums(is.na(test.complete))
+# coding the NA's as -1
+test.complete$housekitchqual[is.na(test.complete$housekitchqual)]<- -1
+test.complete$housesaletype[is.na(test.complete$housesaletype)]<- -1
+test.complete$housecovertype.1[is.na(test.complete$housecovertype.1)]<- -1
+test.complete$housecovertype.2[is.na(test.complete$housecovertype.2)]<- -1
+test.complete$housemasonrytype[is.na(test.complete$housemasonrytype)]<- -1
+test.complete$housezone[is.na(test.complete$housezone)]<- -1
+sum(is.na(test.complete))
 
 #13. Visualization for highly correlated predictors 
 library(corrplot)
-sum(is.na(train.complete)) #9 obsv missing
+
 correlations<-cor(train.complete, use = "complete.obs", method = "kendall")
-corrplot(correlations, method="ellipse", type="lower",  sig.level = 0.01, insig = "blank")
+corrplot(correlations, method="circle", type="lower",  sig.level = 0.01, insig = "blank")
 correlations <- cor(train.complete[,c(5,6,7,8, 16:25)], use="everything")
 corrplot(correlations, method="ellipse", type="lower",  sig.level = 0.01, insig = "blank")
 correlations <- cor(train.complete[,c(5,6,7,8, 26:35)], use="everything")
@@ -611,26 +632,46 @@ corrplot(correlations, method="ellipse", type="lower",  sig.level = 0.01, insig 
 pairs(~YearBuilt+OverallQual+TotalBsmtSF+GrLivArea,data=train.complete,main="Simple Scatterplot Matrix")
 
 #14. Detect and remove highly correlated predictors from Train & Test data
-correlations<-cor(train.complete, use = "complete.obs", method = "kendall")
+correlations<-cor(train.complete, use = "everything", method = "kendall")
 highCorrel<-findCorrelation(correlations, cutoff = 0.80)
-names(train.complete[highCorrel]) # There are three predictors with more than 80% correlation and these are "YearRemodAdd" "OverallCond"  "BsmtQual". They should be removed from the train data
-train.complete<-train.complete[, -highCorrel] # remove the high correlated predictors from the continuous predictors in the train data
-dim(train.complete)
+names(train.complete[highCorrel]) # There are three predictors with more than 80% correlation and these are "YearBuilt" "housefireplcqual"  "housecovertype.1". They should be removed from the train data
+# visualize the highly correlated predictors in train data
+scatterplot(SalePrice ~ YearBuilt, data=train.complete,  xlab="Year Built", ylab="Sale Price", grid=FALSE)
+scatterplot(SalePrice ~ housefireplcqual, data=train.complete,  xlab="Fireplace quality", ylab="Sale Price", grid=FALSE)
+scatterplot(SalePrice ~ housecovertype.1, data=train.complete,  xlab="External House Cover Type", ylab="Sale Price", grid=FALSE)
+train.complete<-train.complete[, -highCorrel] # remove the high correlated predictors from the train data
+dim(train.complete) # 1460 57
 
-correlations<-cor(test.complete, use = "complete.obs", method = "kendall")
-highCorrel<-findCorrelation(correlations, cutoff = 0.80)
-names(test.complete[highCorrel]) # There are three predictors with more than 80% correlation and these are "YearRemodAdd" "OverallCond"  "BsmtQual". They should be removed from the train data
-test.complete<-train.complete[, -highCorrel] # remove the high correlated predictors from the continuous predictors in the train data
-
-dim(test.complete)
-
-### Check for skewness
-library(e1071)
-skewness(train.complete)
+correlations<- cor(test.complete, use = "everything", method = "kendall")
+highCorrel<- findCorrelation(correlations, cutoff = 0.80)
+names(test.complete[highCorrel]) # There are three predictors with more than 80% correlation and these are "YearBuilt" "housefireplcqual" "housecovertype.1". They should be removed from the train data
+test.complete<- test.complete[, -highCorrel] # remove the high correlated predictors from the test data
+dim(test.complete) #1459 57
 
 library(car)
 # plot the relationship between SalePrice and other numeric variables
-scatterplot(SalePrice ~ YrSold, data=train.complete,  xlab="Year Sold", ylab="Sale Price", grid=FALSE)
-scatterplot(SalePrice ~ MoSold, data=train.complete,  xlab="Month Sold", ylab="Sale Price", grid=FALSE)
-scatterplot(SalePrice ~ TotalBsmtSF, data=train.complete,  xlab="Square Footage Floor 1", ylab="Sale Price", grid=FALSE)
+str(train.complete)
+str(test.complete)
+scatterplot(SalePrice ~ YrSold, data= train.complete,  xlab= "Year Sold", ylab= "Sale Price", grid= FALSE)
+scatterplot(SalePrice ~ MoSold, data= train.complete,  xlab= "Month Sold", ylab= "Sale Price", grid= FALSE)
+scatterplot(SalePrice ~ TotalBsmtSF, data = train.complete,  xlab= "Square Footage Floor 1", ylab = "Sale Price", grid= FALSE)
 
+# Check for skewness
+library(moments)
+skewness(train.complete)
+kurtosis(train.complete)
+library(ggplot2)
+qplot(train.complete$GarageYrBlt, geom = 'histogram')
+qplot(train.complete$secndFloorSqft, geom='histogram')
+qplot(train.complete$firstFloorSqft, geom='histogram')
+# Check for outliers
+## The best tool for outlier identification is the boxplot.  It visualizes the median and the spread of the data.
+## https://www.r-bloggers.com/use-box-plots-to-assess-the-distribution-and-to-identify-the-outliers-in-your-dataset/
+boxplot(train.complete$secndFloorSqft, main = "Boxplot", ylab = "Second Floor Area (sqft)")
+boxplot(SalePrice~YrSold, data = train.complete,main = "Boxplot", xlab = "Year Sold", ylab = "Sale Price")
+boxplot(SalePrice~MoSold, data = train.complete,main = "Boxplot", xlab = "Month Sold", ylab = "Sale Price")
+# NOTE: OUTLIERS SHOULD NOT BE REMOVED FROM THE DATA. Reference : http://iis4.nateko.lu.se/courses/ngem01/ZuurEtAl_2010_Stistics.pdf
+# Outliers are present in the response variable too
+boxplot(x = train.complete$SalePrice, data = train.complete,main = "Boxplot", xlab = "Sale Price")
+table(train.complete$MoSold, train.complete$YrSold)
+dotchart(train.complete$YrSold, pt.cex = 1)
